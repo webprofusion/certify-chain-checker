@@ -30,32 +30,95 @@
     table {
         border: 1px solid gainsboro;
         border-collapse: collapse;
-        min-width:800px;
+        min-width: 800px;
     }
 
     td {
         border: 1px solid gainsboro;
-        padding:4px;
+        padding: 4px;
     }
+
     .tagline {
-        font-size:8pt;
-       
-        margin-left:16em;
-        margin-top:0;
+        font-size: 8pt;
+
+        margin-left: 16em;
+        margin-top: 0;
     }
-    .tagline, .tagline a {
-        color:rgb(116, 116, 116);
+
+    .tagline,
+    .tagline a {
+        color: rgb(116, 116, 116);
     }
+
     h1 {
         margin-bottom: 0;
     }
+
     h3 {
-        text-overflow: unset;
+        margin: 0;
+    }
+
+    h4 {
+        margin: 0;
+    }
+
+    .legacy-notice,
+    .modern-notice,
+    .warning-notice,
+    .error-notice,
+    .success-notice {
+
+        padding: 0.8em;
+        overflow: auto;
+        margin-top: 1em;
+        margin-bottom: 1em;
+    }
+
+    .legacy-notice p,
+    .modern-notice p,
+    .warning-notice p,
+    .error-notice p {
+        margin: 0;
+        white-space: normal;
+    }
+
+    .warning-notice {
+        background-color: darkorange;
+        color: black;
+    }
+
+    .error-notice {
+        background-color: darkred;
+        color: white;
+    }
+
+    .legacy-notice {
+        background-color: darkgreen;
+        color: white;
+    }
+
+    .modern-notice {
+        background-color: #ffe5b6;
+        color: black;
+    }
+
+    .success {
+        color: darkgreen;
+    }
+
+    .warning {
+        color: darkorange;
+        font-weight: bold;
+    }
+
+    .error {
+        color: darkred;
+        font-weight: bold;
     }
 </style>
 
 <body onload="startup()">
-    <img src="https://certifytheweb.com/images/icon.png" style="float:left; margin-top:1em;padding-right:1em;  height:32px;"/>
+    <img src="https://certifytheweb.com/images/icon.png" style="float:left; margin-top:1em;padding-right:1em;  height:32px;" />
     <h1> Quick Chain Checker</h1>
     <h4 class="tagline">Powered by <a href="https://certifytheweb.com">Certify The Web</a></h4>
     <p>Your web server certificate chain affects how trusted your website certificate is by browsers and devices. To perform a quick check of your servers certificate chain, enter your domain:</p>
@@ -66,8 +129,34 @@
     <pre id="results"></pre>
     <pre id="results-json" style="display: none;"></pre>
 
-    <p style="margin-top:4em;"><small>This optimistically named tool is sponsored by Certify The Web - ACME Certificate Management UI. <a href="https://certifytheweb.com" target="_blank">certifytheweb.com</a></small></small></p>
+    <p style="margin-top:4em;"><small><strong>Note: This tool will only show your current chain and apply some ACME CA (Let's Encrypt etc) related checks. It will not validate your chain.</strong></small></p>
+    <p><small>This optimistically named tool is sponsored by Certify The Web - ACME Certificate Management UI. <a href="https://certifytheweb.com" target="_blank">certifytheweb.com</a></small></p>
+
     <script>
+        var warningCerts = [
+            {
+                serial: "400175048314A4C8218C84A90C16CDDF",
+                name: "R3 cross-signed by IdenTrust",
+                description: "This certificate must not be present in your chain. Immediate action is required. See https://docs.certifytheweb.com/docs/kb/kb-202109-letsencrypt/"
+            }
+        ];
+
+        var chainClassifications =
+            [
+                {
+                    name: "Let's Encrypt Legacy Chain (Supports older devices)",
+                    description: "This Let's Encrypt chain includes the expired DST Root CA X3 in order to remain compatible with older operating system such as Android 7.0 and lower.",
+                    serials: ["4001772137D4E942B8EE76AA3C640AB7", "44AFB080D6A327BA893039862EF8406B"],
+                    status: "OK:Legacy"
+                },
+                {
+                    name: "Let's Encrypt Modern Chain (Does not support some older devices)",
+                    description: "This Let's Encrypt chain uses the newer ISRG Root X1 root, which is trusted by current operating systems. This chain may cause issues for some old devices, particularly Android 7.0 and lower.",
+
+                    serials: ["00912B084ACF0C18A753F6D62E25A75F5A", "008210CFB0D240E3594463E0BB63828B00"],
+                    status: "OK:Modern"
+                }
+            ];
 
         function checkDomain(domain, showResults) {
             fetch('https://api.validation.certifytheweb.com/api/chain?name=' + domain)
@@ -83,15 +172,100 @@
                 );
         }
 
+        function diagnoseChain(result) {
+            var diagnosis = {
+                title: "Summary",
+                summary: "Certificate Chain OK",
+                status: "OK",
+                hasExpiredItems: false,
+                hasLegacyCompat: false
+            };
+
+            if (result.chainItems.length == 0) {
+                diagnosis.summary = "No certificate chain to diagnose";
+                diagnosis.status = "Error"
+            }
+
+            if (result.chainItems[0].status == "Expired") {
+                diagnosis.title = "Certificate has expired";
+                diagnosis.summary = "This certificate has expired and should be renewed.";
+                diagnosis.status = "Error"
+            }
+
+            if (result.chainItems[0].status == "Expiring") {
+                diagnosis.title = "Certificate will expire soon";
+                diagnosis.summary = "This certificate will expires soon and should be renewed.";
+                diagnosis.status = "Warning"
+            }
+
+            for (var w of warningCerts) {
+                if (result.chainItems.find(c => c.serial == w.serial)) {
+                    diagnosis.title = "Action Required";
+                    diagnosis.summary = w.name + ": " + w.description;
+                    diagnosis.hasExpiredItems = true;
+                    diagnosis.status = "Error";
+                }
+            }
+
+            for (var classification of chainClassifications) {
+                if (result.chainItems.length >= 3) {
+
+                    if (result.chainItems[result.chainItems.length - 1].serial == classification.serials[classification.serials.length - 1]) {
+                        if (result.chainItems[result.chainItems.length - 2].serial == classification.serials[classification.serials.length - 2]) {
+                            // chain match
+                            if (diagnosis.status == "OK") {
+                                diagnosis.title = classification.name;
+                                diagnosis.status = classification.status;
+                                diagnosis.summary = classification.description
+                            }
+                        }
+                    }
+                }
+            }
+
+            return diagnosis;
+        }
+
         function formatResults(result) {
+
+            if (result.chainItems.length == 0) return;
+
+            var diagnostic = "";
+
+            var diagnosis = diagnoseChain(result);
+            if (diagnosis.status == "OK") {
+                diagnostic = "<div class='success-notice'>" + diagnosis.summary + "</div>";
+            } else {
+                if (diagnosis.status == "Error") {
+                    diagnostic = "<div class='error-notice'><h3>" + diagnosis.title + "</h3> <p>" + diagnosis.summary + "</p></div>";
+                }
+                if (diagnosis.status == "Warning") {
+                    diagnostic = "<div class='warning-notice'><h3>" + diagnosis.title + "</h3> <p>" + diagnosis.summary + "</p></div>";
+                }
+                if (diagnosis.status == "OK:Legacy") {
+                    diagnostic = "<div class='legacy-notice'><h3>" + diagnosis.title + "</h3> <p>" + diagnosis.summary + "</p></div>";
+                }
+
+                if (diagnosis.status == "OK:Modern") {
+                    diagnostic = "<div class='modern-notice'><h3>" + diagnosis.title + "</h3> <p>" + diagnosis.summary + "</p></div>";
+                }
+
+            }
+
             var output = "<div class='results'>";
             output += "<h2>Certificate Chain for " + result.domain + "</h2>";
             output += "<h3>" + result.summary + "</h3>";
+
+            output += diagnostic;
+
             output += "<table>";
-            output += "<tr><th>Subject</th><th>Serial</th><th>Issuer</th><th>Start</th><th>Expiry</th><th>Type</th></tr>";
+            output += "<tr><th>Subject</th><th>Serial</th><th>Issuer</th><th>Start</th><th>Expiry</th><th>Type</th><th>Status</th></tr>";
 
             for (var i of result.chainItems) {
-                output += "<tr><td>" + i.name + "</td><td>" + i.serial + "</td><td>" + i.issuer + "</td><td>" + new Date(i.startDate).toDateString() + "</td><td>" + new Date(i.expiryDate).toDateString() + "</td><td>" + i.type + "</td></tr>";
+                output += "<tr>";
+                output += "<td>" + i.name + "</td><td>" + i.serial + "</td><td>" + i.issuer + "</td><td>" + new Date(i.startDate).toDateString() + "</td><td>" + new Date(i.expiryDate).toDateString() + "</td><td>" + i.type + "</td>";
+                output += "<td>" + (i.status == "OK" ? "<span class='success'>OK</span>" : i.status == "Expiring" ? "<span class='warning'>Expiring</span>" : i.status == "Expired" ? "<span class='error'>Expired</span>" : i.status) + "</td>";
+                output += "</tr>";
             }
             output += "</table>";
             output += "</div>";
@@ -126,6 +300,7 @@
 
         }
 
+        // warmup call for service
         function startup() {
             checkDomain("cloudflare.com", false);
         }
