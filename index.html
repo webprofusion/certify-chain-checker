@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<title>Quick Chain Check - Sponsored by Certify The Web</title>
+<style>
+    body,
+    * {
+        font-family: Arial, Helvetica, sans-serif;
+
+    }
+
+    body {
+        font-size: 10pt;
+        padding: 2em;
+        max-width: 800px;
+    }
+
+    .progress-indicator {
+        /*https://github.com/SamHerbert/SVG-Loaders/edit/master/svg-loaders/rings.svg*/
+        background-image: url("data:image/svg+xml,%3C!-- By Sam Herbert (@sherb), for everyone. More @ http://goo.gl/7AJzbL --%3E%3Csvg width='45' height='45' viewBox='0 0 45 45' xmlns='http://www.w3.org/2000/svg' stroke='%23fff'%3E%3Cg fill='none' fill-rule='evenodd' transform='translate(1 1)' stroke-width='2'%3E%3Ccircle cx='22' cy='22' r='6' stroke-opacity='0'%3E%3Canimate attributeName='r' begin='1.5s' dur='3s' values='6;22' calcMode='linear' repeatCount='indefinite' /%3E%3Canimate attributeName='stroke-opacity' begin='1.5s' dur='3s' values='1;0' calcMode='linear' repeatCount='indefinite' /%3E%3Canimate attributeName='stroke-width' begin='1.5s' dur='3s' values='2;0' calcMode='linear' repeatCount='indefinite' /%3E%3C/circle%3E%3Ccircle cx='22' cy='22' r='6' stroke-opacity='0'%3E%3Canimate attributeName='r' begin='3s' dur='3s' values='6;22' calcMode='linear' repeatCount='indefinite' /%3E%3Canimate attributeName='stroke-opacity' begin='3s' dur='3s' values='1;0' calcMode='linear' repeatCount='indefinite' /%3E%3Canimate attributeName='stroke-width' begin='3s' dur='3s' values='2;0' calcMode='linear' repeatCount='indefinite' /%3E%3C/circle%3E%3Ccircle cx='22' cy='22' r='8'%3E%3Canimate attributeName='r' begin='0s' dur='1.5s' values='6;1;2;3;4;5;6' calcMode='linear' repeatCount='indefinite' /%3E%3C/circle%3E%3C/g%3E%3C/svg%3E");
+        color: whitesmoke;
+        background-repeat: no-repeat;
+        height: 64px;
+        width: 64px;
+        background-color: #000;
+        margin-top: 1em;
+        padding-left: 4em;
+        padding-top: 1em;
+        filter: invert();
+    }
+
+    table {
+        border: 1px solid gainsboro;
+        border-collapse: collapse;
+        min-width:800px;
+    }
+
+    td {
+        border: 1px solid gainsboro;
+        padding:4px;
+    }
+    .tagline {
+        font-size:8pt;
+       
+        margin-left:16em;
+        margin-top:0;
+    }
+    .tagline, .tagline a {
+        color:rgb(116, 116, 116);
+    }
+    h1 {
+        margin-bottom: 0;
+    }
+    h3 {
+        text-overflow: unset;
+    }
+</style>
+
+<body onload="startup()">
+    <img src="https://certifytheweb.com/images/icon.png" style="float:left; margin-top:1em;padding-right:1em;  height:32px;"/>
+    <h1> Quick Chain Checker</h1>
+    <h4 class="tagline">Powered by <a href="https://certifytheweb.com">Certify The Web</a></h4>
+    <p>Your web server certificate chain affects how trusted your website certificate is by browsers and devices. To perform a quick check of your servers certificate chain, enter your domain:</p>
+    <input type="text" id="domain" placeholder="Your domain e.g. example.com, without http:// or https:// prefix">
+    <button onclick="checkChain()">Check Chain</button>
+    <div id="progress" class="progress-indicator" style="display:none;">Scanning..</div>
+
+    <pre id="results"></pre>
+    <pre id="results-json" style="display: none;"></pre>
+
+    <p style="margin-top:4em;"><small>This optimistically named tool is sponsored by Certify The Web - ACME Certificate Management UI. <a href="https://certifytheweb.com" target="_blank">certifytheweb.com</a></small></small></p>
+    <script>
+
+        function checkDomain(domain, showResults) {
+            fetch('https://api.validation.certifytheweb.com/api/chain?name=' + domain)
+                .then(response => response.json())
+                .then((data) => {
+                    hideProgress();
+                    var json = JSON.stringify(data, null, 2);
+                    if (showResults) {
+                        document.getElementById("results-json").innerText = json;
+                        formatResults(data);
+                    }
+                }
+                );
+        }
+
+        function formatResults(result) {
+            var output = "<div class='results'>";
+            output += "<h2>Certificate Chain for " + result.domain + "</h2>";
+            output += "<h3>" + result.summary + "</h3>";
+            output += "<table>";
+            output += "<tr><th>Subject</th><th>Serial</th><th>Issuer</th><th>Start</th><th>Expiry</th><th>Type</th></tr>";
+
+            for (var i of result.chainItems) {
+                output += "<tr><td>" + i.name + "</td><td>" + i.serial + "</td><td>" + i.issuer + "</td><td>" + new Date(i.startDate).toDateString() + "</td><td>" + new Date(i.expiryDate).toDateString() + "</td><td>" + i.type + "</td></tr>";
+            }
+            output += "</table>";
+            output += "</div>";
+            document.getElementById("results").innerHTML = output;
+        }
+
+        function showProgress() {
+            document.getElementById("progress").style.display = 'block';
+        }
+
+        function hideProgress() {
+            document.getElementById("progress").style.display = 'none';
+        }
+
+        function checkChain() {
+
+            var domain = document.getElementById("domain").value;
+            if (!(domain != null && domain.length > 3 && domain.length < 255 && domain.indexOf(".") > -1)) {
+                alert("Check the domain you have entered is valid.");
+                return;
+            }
+
+            if (domain.indexOf("http") == -1) {
+                domain = "https://" + domain;
+            }
+
+            let url = (new URL(domain));
+            domain = url.hostname;
+
+            showProgress();
+            checkDomain(domain, true);
+
+        }
+
+        function startup() {
+            checkDomain("cloudflare.com", false);
+        }
+    </script>
+</body>
