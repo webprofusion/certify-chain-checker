@@ -11,6 +11,14 @@
         font-size: 10pt;
         padding: 2em;
         max-width: 800px;
+        color: #383838;
+    }
+
+    .logo {
+        float: left;
+        margin-top: 0.6em;
+        padding-right: 1em;
+        height: 32px;
     }
 
     .progress-indicator {
@@ -50,16 +58,14 @@
         color: rgb(116, 116, 116);
     }
 
-    h1 {
-        margin-bottom: 0;
-    }
-
+    h1,
+    h2,
+    h3,
     h3 {
-        margin: 0;
-    }
-
-    h4 {
-        margin: 0;
+        margin-bottom: 0;
+        margin-top: 0.3em;
+        font-weight: 200;
+        white-space: normal;
     }
 
     .legacy-notice,
@@ -83,23 +89,24 @@
     }
 
     .warning-notice {
-        background-color: darkorange;
-        color: black;
+        background-color: #ffb963;
+        color: #380000;
+        font-weight: bold;
     }
 
     .error-notice {
-        background-color: darkred;
-        color: white;
+        background-color: #ffe2e2;
+        color: #980000;
     }
 
     .legacy-notice {
-        background-color: darkgreen;
+        background-color: #225f22;
         color: white;
     }
 
     .modern-notice {
         background-color: #ffe5b6;
-        color: black;
+        color: #313131;
     }
 
     .success {
@@ -115,15 +122,42 @@
         color: darkred;
         font-weight: bold;
     }
+
+    hr {
+        border-top: 1px solid rgb(212 212 212);
+        margin-top: 1em;
+    }
+
+    .chain-summary {
+        font-weight: 600;
+        border: 1px solid #e4e4e4;
+        padding: 1em;
+        background-color: #f7f7f7;
+        white-space: normal;
+    }
+
+    .chain-item {
+        font-size: 8pt;
+        border: 1px solid #e4e4e4;
+        padding: 1em;
+        background-color: #fbfbfb;
+        margin-bottom: 1em;
+        box-shadow: 1px 2px 8px 0px #dcdcdc;
+    }
+
+    .chain-item label {
+        font-weight: 400;
+    }
 </style>
 
 <body onload="startup()">
-    <img src="https://certifytheweb.com/images/icon.png" style="float:left; margin-top:1em;padding-right:1em;  height:32px;" />
+    <img src="https://certifytheweb.com/images/icon.png" class="logo" />
     <h1> Quick Chain Checker</h1>
     <h4 class="tagline">Powered by <a href="https://certifytheweb.com">Certify The Web</a></h4>
     <p>Your web server certificate chain affects how trusted your website certificate is by browsers and devices. To perform a quick check of your servers certificate chain, enter your domain:</p>
     <input type="text" id="domain" placeholder="Your domain e.g. example.com, without http:// or https:// prefix">
     <button onclick="checkChain()">Check Chain</button>
+    <hr />
     <div id="progress" class="progress-indicator" style="display:none;">Scanning..</div>
 
     <pre id="results"></pre>
@@ -150,11 +184,16 @@
                     status: "OK:Legacy"
                 },
                 {
-                    name: "Let's Encrypt Modern Chain (Does not support some older devices)",
+                    name: "Let's Encrypt Modern Chain (May not support some older devices)",
                     description: "This Let's Encrypt chain uses the newer ISRG Root X1 root, which is trusted by current operating systems. This chain may cause issues for some old devices, particularly Android 7.0 and lower.",
-
                     serials: ["00912B084ACF0C18A753F6D62E25A75F5A", "008210CFB0D240E3594463E0BB63828B00"],
                     status: "OK:Modern"
+                },
+                {
+                    name: "Let's Encrypt E1 > ISRG Root X2 (ECDSA) Chain (May not support some older devices)",
+                    description: "This Let's Encrypt chain uses the newer ISRG Root X2 root, which is trusted by many current operating systems, but not all. This chain may cause issues for some old devices.",
+                    serials: ["00B3BDDFF8A7845BBCE903A04135B34A45", "41D29DD172EAEEA780C12C6CE92F8752"],
+                    status: "OK:ECDSA"
                 }
             ];
 
@@ -239,9 +278,11 @@
                 if (diagnosis.status == "Error") {
                     diagnostic = "<div class='error-notice'><h3>" + diagnosis.title + "</h3> <p>" + diagnosis.summary + "</p></div>";
                 }
+
                 if (diagnosis.status == "Warning") {
                     diagnostic = "<div class='warning-notice'><h3>" + diagnosis.title + "</h3> <p>" + diagnosis.summary + "</p></div>";
                 }
+
                 if (diagnosis.status == "OK:Legacy") {
                     diagnostic = "<div class='legacy-notice'><h3>" + diagnosis.title + "</h3> <p>" + diagnosis.summary + "</p></div>";
                 }
@@ -250,25 +291,30 @@
                     diagnostic = "<div class='modern-notice'><h3>" + diagnosis.title + "</h3> <p>" + diagnosis.summary + "</p></div>";
                 }
 
+                if (diagnosis.status == "OK:ECDSA") {
+                    diagnostic = "<div class='modern-notice'><h3>" + diagnosis.title + "</h3> <p>" + diagnosis.summary + "</p></div>";
+                }
             }
 
             var output = "<div class='results'>";
             output += "<h2>Certificate Chain for " + result.domain + "</h2>";
-            output += "<h3>" + result.summary + "</h3>";
+            output += "<p class='chain-summary'>" + result.summary + "</p>";
 
             output += diagnostic;
 
-            output += "<table>";
-            output += "<tr><th>Subject</th><th>Serial</th><th>Issuer</th><th>Start</th><th>Expiry</th><th>Type</th><th>Status</th></tr>";
-
             for (var i of result.chainItems) {
-                output += "<tr>";
-                output += "<td>" + i.name + "</td><td>" + i.serial + "</td><td>" + i.issuer + "</td><td>" + new Date(i.startDate).toDateString() + "</td><td>" + new Date(i.expiryDate).toDateString() + "</td><td>" + i.type + "</td>";
-                output += "<td>" + (i.status == "OK" ? "<span class='success'>OK</span>" : i.status == "Expiring" ? "<span class='warning'>Expiring</span>" : i.status == "Expired" ? "<span class='error'>Expired</span>" : i.status) + "</td>";
-                output += "</tr>";
+                output += "<div class='chain-item'>";
+                output += "<h2>" + i.name + "</h2>";
+                output += "<p><label>Serial</label> " + i.serial + "</p>";
+                output += "<p><label>Issuer</label> " + i.issuer + "</p>";
+                output += "<p><label>Start</label> " + new Date(i.startDate).toDateString() + "</p>";
+                output += "<p><label>Expiry</label> " + new Date(i.expiryDate).toDateString() + "</p>";
+                output += "<p><label>Type</label> " + i.type + "</p>";
+                output += "<p><label>Status</label> " + (i.status == "OK" ? "<span class='success'>OK</span>" : i.status == "Expiring" ? "<span class='warning'>Expiring</span>" : i.status == "Expired" ? "<span class='error'>Expired</span>" : i.status) + "</p>";
+
+                output += "</div>";
             }
-            output += "</table>";
-            output += "</div>";
+
             document.getElementById("results").innerHTML = output;
         }
 
