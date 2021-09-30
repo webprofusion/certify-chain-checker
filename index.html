@@ -164,6 +164,11 @@
     <pre id="results"></pre>
     <pre id="results-json" style="display: none;"></pre>
 
+    <p class="error-notice">
+        An important bug has been identified with this tool and it will currently fail to identify if your chain is serving the expired R3 and (unhelpfully) resolve the valid R3 instead (and think you are using the correct ISRG Root X1 chain). Please use a <a href="https://docs.certifytheweb.com/docs/kb/kb-202109-letsencrypt#chain-checking">different tool</a>  to see if your R3 has expired. If in doubt, reboot your server to clear cached chains.
+<br><br>
+        When debugging chains in Apache, nginx etc on linux, mac os etc, ensure you are using the updated chain in your config, <strong>not just your leaf certificate</strong> otherwise client apps will resolve the R3 themselves which may lead them to the expired R3.
+    </p>
     <p style="margin-top:4em;"><small><strong>Note: This tool will only show your current chain as our client code sees it and apply some ACME CA (Let's Encrypt etc) related checks. It will not validate your entire chain. If you are not serving all intermediates this tool will act like a (Windows) client and resolve the intermediates itself. For alternative full chain checking tools (including missing intermediates), see <a href="https://docs.certifytheweb.com/docs/kb/kb-202109-letsencrypt#chain-checking" target="_blank">https://docs.certifytheweb.com/docs/kb/kb-202109-letsencrypt#chain-checking</a></strong></small></p>
     <p><small>This optimistically named tool is sponsored by Certify The Web - ACME Certificate Management UI. <a href="https://certifytheweb.com" target="_blank">certifytheweb.com</a></small></p>
 
