@@ -210,7 +210,7 @@
             ];
 
         function checkDomain(domain, showResults) {
-            fetch('https://api.validation.certifytheweb.com/api/chain?name=' + domain)
+            fetch('https://chaincheckerlinux.azurewebsites.net/api/chain?name=' + domain)
                 .then(response => response.json())
                 .then((data) => {
                     hideProgress();
