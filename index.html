@@ -99,8 +99,9 @@
     }
 
     .legacy-notice {
-        background-color: #225f22;
-        color: white;
+        background-color: #ffb55c;
+        color: #380000;
+        font-weight: bold;
     }
 
     .modern-notice {
@@ -164,11 +165,7 @@
     <pre id="results"></pre>
     <pre id="results-json" style="display: none;"></pre>
 
-    <p class="error-notice">
-        An important bug has been identified with this tool and it will currently fail to identify if your chain is serving the expired R3 and (unhelpfully) resolve the valid R3 instead (and think you are using the correct ISRG Root X1 chain). Please use a <a href="https://docs.certifytheweb.com/docs/kb/kb-202109-letsencrypt#chain-checking">different tool</a>  to see if your R3 has expired. If in doubt, reboot your server to clear cached chains.
-<br><br>
-        When debugging chains in Apache, nginx etc on linux, mac os etc, ensure you are using the updated chain in your config, <strong>not just your leaf certificate</strong> otherwise client apps will resolve the R3 themselves which may lead them to the expired R3.
-    </p>
+
     <p style="margin-top:4em;"><small><strong>Note: This tool will only show your current chain as our client code sees it and apply some ACME CA (Let's Encrypt etc) related checks. It will not validate your entire chain. If you are not serving all intermediates this tool will act like a (Windows) client and resolve the intermediates itself. For alternative full chain checking tools (including missing intermediates), see <a href="https://docs.certifytheweb.com/docs/kb/kb-202109-letsencrypt#chain-checking" target="_blank">https://docs.certifytheweb.com/docs/kb/kb-202109-letsencrypt#chain-checking</a></strong></small></p>
     <p><small>This optimistically named tool is sponsored by Certify The Web - ACME Certificate Management UI. <a href="https://certifytheweb.com" target="_blank">certifytheweb.com</a></small></p>
 
@@ -186,13 +183,25 @@
                 {
                     name: "Let's Encrypt Legacy Chain (Supports older devices)",
                     description: "This Let's Encrypt chain includes the expired DST Root CA X3 in order to remain compatible with older operating system such as Android 7.0 and lower.",
-                    serials: ["4001772137D4E942B8EE76AA3C640AB7", "44AFB080D6A327BA893039862EF8406B"],
+                    serials: ["44AFB080D6A327BA893039862EF8406B"],
+                    status: "OK:Legacy"
+                },
+                {
+                    name: "Let's Encrypt Legacy Chain (Supports older devices)",
+                    description: "This Let's Encrypt chain includes the expired DST Root CA X3 in order to remain compatible with older operating system such as Android 7.0 and lower.",
+                    serials: ["4001772137D4E942B8EE76AA3C640AB7"],
                     status: "OK:Legacy"
                 },
                 {
                     name: "Let's Encrypt Modern Chain (May not support some older devices)",
                     description: "This Let's Encrypt chain uses the newer ISRG Root X1 root, which is trusted by current operating systems. This chain may cause issues for some old devices, particularly Android 7.0 and lower.",
-                    serials: ["00912B084ACF0C18A753F6D62E25A75F5A", "008210CFB0D240E3594463E0BB63828B00"],
+                    serials: ["008210CFB0D240E3594463E0BB63828B00"],
+                    status: "OK:Modern"
+                },
+                {
+                    name: "Let's Encrypt Modern Chain (May not support some older devices)",
+                    description: "This Let's Encrypt chain uses the newer ISRG Root X1 root, which is trusted by current operating systems. This chain may cause issues for some old devices, particularly Android 7.0 and lower.",
+                    serials: ["00912B084ACF0C18A753F6D62E25A75F5A"],
                     status: "OK:Modern"
                 },
                 {
@@ -210,7 +219,7 @@
             ];
 
         function checkDomain(domain, showResults) {
-            fetch('https://chaincheckerlinux.azurewebsites.net/api/chain?name=' + domain)
+            fetch('https://chaincheckergo.azurewebsites.net/api/checkchain?name=' + domain)
                 .then(response => response.json())
                 .then((data) => {
                     hideProgress();
@@ -259,16 +268,27 @@
             }
 
             for (var classification of chainClassifications) {
-                if (result.chainItems.length >= 3) {
 
-                    if (result.chainItems[result.chainItems.length - 1].serial == classification.serials[classification.serials.length - 1]) {
-                        if (result.chainItems[result.chainItems.length - 2].serial == classification.serials[classification.serials.length - 2]) {
-                            // chain match
-                            if (diagnosis.status == "OK") {
-                                diagnosis.title = classification.name;
-                                diagnosis.status = classification.status;
-                                diagnosis.summary = classification.description
+                var matched = false;
+                if (result.chainItems.length >= 2) {
+
+
+                    if (classification.serials[classification.serials.length - 1].toUpperCase().endsWith(result.chainItems[result.chainItems.length - 1].serial.toUpperCase())) {
+                        if (classification.serials.length == 1) {
+                            matched = true;
+                        }
+
+                        if (!matched) {
+                            if (classification.serials[classification.serials.length - 2].toUpperCase().endsWith(chainItems[result.chainItems.length - 2].serial.toUpperCase())) {
+                                matched = true;
                             }
+                        }
+
+                        // chain match
+                        if (matched && diagnosis.status == "OK") {
+                            diagnosis.title = classification.name;
+                            diagnosis.status = classification.status;
+                            diagnosis.summary = classification.description
                         }
                     }
                 }
@@ -280,8 +300,19 @@
         function formatResults(result) {
 
             if (result.chainItems.length == 0) {
-                document.getElementById("results").innerHTML ="<div class='error-notice'><p>" + result.summary + "</p></div>";
+                document.getElementById("results").innerHTML = "<div class='error-notice'><p>" + result.summary + "</p></div>";
                 return;
+            } else {
+                var chainSummary = result.chainItems.map(c => c.name).join(" ▶▶ ");
+
+                if (result.chainItems.length > 1) {
+                    var lastItem = result.chainItems[result.chainItems.length - 1];
+                    if (lastItem.issuer != lastItem.name) {
+                        chainSummary += " ▶▶ [" + lastItem.issuer + "]"
+                    }
+                }
+
+                result.summary = chainSummary;
             }
 
             var diagnostic = "";
