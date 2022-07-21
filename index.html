@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <title>Quick Chain Check - Powered by Certify The Web</title>
 <style>
-    body,
-    * {
+    *,
+    body {
         font-family: Arial, Helvetica, sans-serif;
     }
 
@@ -67,11 +67,11 @@
         white-space: normal;
     }
 
+    .error-notice,
     .legacy-notice,
     .modern-notice,
-    .warning-notice,
-    .error-notice,
-    .success-notice {
+    .success-notice,
+    .warning-notice {
 
         padding: 0.8em;
         overflow: auto;
@@ -79,10 +79,10 @@
         margin-bottom: 1em;
     }
 
+    .error-notice p,
     .legacy-notice p,
     .modern-notice p,
-    .warning-notice p,
-    .error-notice p {
+    .warning-notice p {
         margin: 0;
         white-space: normal;
     }
@@ -142,7 +142,7 @@
         padding: 1em;
         background-color: #fbfbfb;
         margin-bottom: 1em;
-        box-shadow: 1px 2px 8px 0px #dcdcdc;
+        box-shadow: 1px 2px 8px 0 #dcdcdc;
     }
 
     .chain-item label {
@@ -153,21 +153,29 @@
 </style>
 
 <body onload="startup()">
-    <img src="https://certifytheweb.com/images/icon.png" class="logo" />
+    <img src="https://certifytheweb.com/images/icon.png" class="logo"/>
     <h1> Quick Chain Checker</h1>
-    <h4 class="tagline">Powered by <a href="https://certifytheweb.com">Certify The Web</a></h4>
+    <h4 class="tagline">Powered by <a href="https://certifytheweb.com">Certify The Web</a>
+    </h4>
     <p>Your web server certificate chain affects how trusted your website certificate is by browsers and devices. To perform a quick check of your servers certificate chain, enter your domain:</p>
     <input type="text" id="domain" placeholder="Your domain e.g. example.com, without http:// or https:// prefix">
     <button onclick="checkChain()">Check Chain</button>
-    <hr />
+    <hr/>
     <div id="progress" class="progress-indicator" style="display:none;">Scanning..</div>
 
     <pre id="results"></pre>
     <pre id="results-json" style="display: none;"></pre>
 
-
-    <p style="margin-top:4em;"><small><strong>Note: This tool will only show your current chain as our client code sees it and applies some ACME CA (Let's Encrypt etc) related checks. It will not validate your entire chain and will assume clients know commonly trusted root certificates. For alternative full chain checking tools (including missing intermediates), see <a href="https://docs.certifytheweb.com/docs/kb/kb-202109-letsencrypt#chain-checking" target="_blank">https://docs.certifytheweb.com/docs/kb/kb-202109-letsencrypt#chain-checking</a></strong></small></p>
-    <p><small>This optimistically named tool is sponsored by Certify The Web - ACME Certificate Management UI. <a href="https://certifytheweb.com" target="_blank">certifytheweb.com</a></small></p>
+    <p style="margin-top:4em;">
+        <small>
+            <strong>Note: This tool will only show your current chain as our client code sees it and applies some ACME CA (Let's Encrypt etc) related checks. It will not validate your entire chain and will assume clients know commonly trusted root certificates. For alternative full chain checking tools (including missing intermediates), see <a href="https://docs.certifytheweb.com/docs/kb/kb-202109-letsencrypt#chain-checking" target="_blank">https://docs.certifytheweb.com/docs/kb/kb-202109-letsencrypt#chain-checking</a>
+            </strong>
+        </small>
+    </p>
+    <p>
+        <small>This optimistically named tool is sponsored by Certify The Web - ACME Certificate Management UI. <a href="https://certifytheweb.com" target="_blank">certifytheweb.com</a>
+        </small>
+    </p>
 
     <script>
         var warningCerts = [
@@ -178,45 +186,50 @@
             }
         ];
 
-        var chainClassifications =
-            [
-                {
-                    name: "Let's Encrypt Legacy Chain (Supports older devices)",
-                    description: "This Let's Encrypt chain includes the expired DST Root CA X3 in order to remain compatible with older operating system such as Android 7.0 and lower.",
-                    serials: ["44AFB080D6A327BA893039862EF8406B"],
-                    status: "OK:Legacy"
-                },
-                {
-                    name: "Let's Encrypt Legacy Chain (Supports older devices)",
-                    description: "This Let's Encrypt chain includes the expired DST Root CA X3 in order to remain compatible with older operating system such as Android 7.0 and lower.",
-                    serials: ["4001772137D4E942B8EE76AA3C640AB7"],
-                    status: "OK:Legacy"
-                },
-                {
-                    name: "Let's Encrypt Modern Chain (May not support some older devices)",
-                    description: "This Let's Encrypt chain uses the newer ISRG Root X1 root, which is trusted by current operating systems. This chain may cause issues for some old devices, particularly Android 7.0 and lower.",
-                    serials: ["008210CFB0D240E3594463E0BB63828B00"],
-                    status: "OK:Modern"
-                },
-                {
-                    name: "Let's Encrypt Modern Chain (May not support some older devices)",
-                    description: "This Let's Encrypt chain uses the newer ISRG Root X1 root, which is trusted by current operating systems. This chain may cause issues for some old devices, particularly Android 7.0 and lower.",
-                    serials: ["00912B084ACF0C18A753F6D62E25A75F5A"],
-                    status: "OK:Modern"
-                },
-                {
-                    name: "Let's Encrypt E1 > ISRG Root X2 (ECDSA) Short Chain (May not support some older devices)",
-                    description: "This Let's Encrypt chain uses the newer ISRG Root X2 root, which is trusted by many current operating systems, but not all. This chain may cause issues for some old devices.",
-                    serials: ["00B3BDDFF8A7845BBCE903A04135B34A45", "41D29DD172EAEEA780C12C6CE92F8752"],
-                    status: "OK:ECDSA"
-                },
-                {
-                    name: "Let's Encrypt (ECDSA) Long Chain (May not support some older devices)",
-                    description: "This Let's Encrypt chain uses the newer ISRG Root X1 root, which is trusted by current operating systems. This chain may cause issues for some old devices.",
-                    serials: ["079E492886376FD40848C23FC631E463", "008210CFB0D240E3594463E0BB63828B00"],
-                    status: "OK:ECDSA"
-                }
-            ];
+        var chainClassifications = [
+            {
+                name: "Let's Encrypt Legacy Chain (Supports older devices)",
+                description: "This Let's Encrypt chain includes the expired DST Root CA X3 in order to remain compatible with older operating system such as Android 7.0 and lower.",
+                serials: ["44AFB080D6A327BA893039862EF8406B"],
+                status: "OK:Legacy"
+            }, {
+                name: "Let's Encrypt Legacy Chain (Supports older devices)",
+                description: "This Let's Encrypt chain includes the expired DST Root CA X3 in order to remain compatible with older operating system such as Android 7.0 and lower.",
+                serials: ["4001772137D4E942B8EE76AA3C640AB7"],
+                status: "OK:Legacy"
+            }, {
+                name: "Let's Encrypt Modern Chain (May not support some older devices)",
+                description: "This Let's Encrypt chain uses the newer ISRG Root X1 root, which is trusted by current operating systems. This chain may cause issues for some old devices, particularly Android 7.1 and lower.",
+                serials: ["008210CFB0D240E3594463E0BB63828B00"],
+                status: "OK:Modern"
+            }, {
+                name: "Let's Encrypt Modern Chain (May not support some older devices)",
+                description: "This Let's Encrypt chain uses the newer ISRG Root X1 root, which is trusted by current operating systems. This chain may cause issues for some old devices, particularly Android 7.1 and lower.",
+                serials: ["00912B084ACF0C18A753F6D62E25A75F5A"],
+                status: "OK:Modern"
+            }, {
+                name: "Let's Encrypt E1 > ISRG Root X2 (ECDSA) Short Chain (May not support some older devices)",
+                description: "This Let's Encrypt chain uses the newer ISRG Root X2 root, which is trusted by many current operating systems, but not all. This chain may cause issues for some old devices.",
+                serials: [
+                    "00B3BDDFF8A7845BBCE903A04135B34A45", "41D29DD172EAEEA780C12C6CE92F8752"
+                ],
+                status: "OK:ECDSA"
+            }, {
+                name: "Let's Encrypt (ECDSA) Long Chain (May not support some older devices)",
+                description: "This Let's Encrypt chain uses the newer ISRG Root X1 root, which is trusted by current operating systems. This chain may cause issues for some old devices.",
+                serials: [
+                    "079E492886376FD40848C23FC631E463", "008210CFB0D240E3594463E0BB63828B00"
+                ],
+                status: "OK:ECDSA"
+            }, {
+                name: "Let's Encrypt Mixed Chain (Out of order)",
+                description: "This chain has been incorrectly resolved. Consider settings ISRG Root X1 as your preferred issuer in your ACME client to resolve chain ambiguity.",
+                serials: [
+                    "4001772137D4E942B8EE76AA3C640AB7", "912B084ACF0C18A753F6D62E25A75F5A"
+                ],
+                status: "Error"
+            }
+        ];
 
         function checkDomain(domain, showResults) {
             fetch('https://chaincheckergo.azurewebsites.net/api/checkchain?name=' + domain)
@@ -225,11 +238,12 @@
                     hideProgress();
                     var json = JSON.stringify(data, null, 2);
                     if (showResults) {
-                        document.getElementById("results-json").innerText = json;
+                        document
+                            .getElementById("results-json")
+                            .innerText = json;
                         formatResults(data);
                     }
-                }
-                );
+                });
         }
 
         function diagnoseChain(result) {
@@ -272,20 +286,23 @@
                 var matched = false;
                 if (result.chainItems.length >= 2) {
 
-
                     if (classification.serials[classification.serials.length - 1].toUpperCase().endsWith(result.chainItems[result.chainItems.length - 1].serial.toUpperCase())) {
                         if (classification.serials.length == 1) {
                             matched = true;
                         }
 
-                        if (!matched) {
-                            if (classification.serials[classification.serials.length - 2].toUpperCase().endsWith(chainItems[result.chainItems.length - 2].serial.toUpperCase())) {
+                        if (!matched && classification.serials.length > 1) {
+                            if (classification.serials[classification.serials.length - 2].toUpperCase().endsWith(result.chainItems[result.chainItems.length - 2].serial.toUpperCase())) {
                                 matched = true;
                             }
                         }
 
                         // chain match
                         if (matched && diagnosis.status == "OK") {
+                            diagnosis.title = classification.name;
+                            diagnosis.status = classification.status;
+                            diagnosis.summary = classification.description
+                        } else if (matched && classification.status.startsWith("Error")) {
                             diagnosis.title = classification.name;
                             diagnosis.status = classification.status;
                             diagnosis.summary = classification.description
@@ -300,10 +317,15 @@
         function formatResults(result) {
 
             if (result.chainItems.length == 0) {
-                document.getElementById("results").innerHTML = "<div class='error-notice'><p>" + result.summary + "</p></div>";
+                document
+                    .getElementById("results")
+                    .innerHTML = "<div class='error-notice'><p>" + result.summary + "</p></div>";
                 return;
             } else {
-                var chainSummary = result.chainItems.map(c => c.name).join(" ▶▶ ");
+                var chainSummary = result
+                    .chainItems
+                    .map(c => c.name)
+                    .join(" ▶▶ ");
 
                 if (result.chainItems.length > 1) {
                     var lastItem = result.chainItems[result.chainItems.length - 1];
@@ -356,25 +378,42 @@
                 output += "<p><label>Start</label> " + new Date(i.startDate).toDateString() + "</p>";
                 output += "<p><label>Expiry</label> " + new Date(i.expiryDate).toDateString() + "</p>";
                 output += "<p><label>Type</label> " + i.type + "</p>";
-                output += "<p><label>Status</label> " + (i.status == "OK" ? "<span class='success'>OK</span>" : i.status == "Expiring" ? "<span class='warning'>Expiring</span>" : i.status == "Expired" ? "<span class='error'>Expired</span>" : i.status) + "</p>";
+                output += "<p><label>Status</label> " + (
+                    i.status == "OK"
+                    ? "<span class='success'>OK</span>"
+                    : i.status == "Expiring"
+                        ? "<span class='warning'>Expiring</span>"
+                        : i.status == "Expired"
+                            ? "<span class='error'>Expired</span>"
+                            : i.status) + "</p>";
 
                 output += "</div>";
             }
 
-            document.getElementById("results").innerHTML = output;
+            document
+                .getElementById("results")
+                .innerHTML = output;
         }
 
         function showProgress() {
-            document.getElementById("progress").style.display = 'block';
+            document
+                .getElementById("progress")
+                .style
+                .display = 'block';
         }
 
         function hideProgress() {
-            document.getElementById("progress").style.display = 'none';
+            document
+                .getElementById("progress")
+                .style
+                .display = 'none';
         }
 
         function checkChain() {
 
-            var domain = document.getElementById("domain").value;
+            var domain = document
+                .getElementById("domain")
+                .value;
             if (!(domain != null && domain.length > 3 && domain.length < 255 && domain.indexOf(".") > -1)) {
                 alert("Check the domain you have entered is valid.");
                 return;
